@@ -19,6 +19,11 @@ title_counter = {}
 # One to one mapping from titles to urls
 titles_to_urls = {}
 
+def set_openai_key(key):
+    if key == "":
+        return
+    openai.api_key = key
+
 def get_youtube_data(url):
 
     video_id = url.split("=")[1]
@@ -107,18 +112,31 @@ def refencify(text):
     timestamp_pattern = r"Timestamp: \((.+)\)"
 
     title = re.search(title_pattern, text).group(1)
-    start_timestamp = re.search(timestamp_pattern, text).group(1).split(",")[0]
+    timestamp = re.search(timestamp_pattern, text).group(1).split(",")
+    start_timestamp, end_timestamp = timestamp
 
     url = titles_to_urls[title]
     start_seconds = to_seconds(start_timestamp)
+    end_seconds = to_seconds(end_timestamp)
 
-    return f"Segment URL: {url}&t={start_seconds}\n" + text
+    video_iframe = f'''<iframe
+    width="320"
+    height="240"
+    src="{url.replace("watch?v=", "embed/")}?start={start_seconds}&end={end_seconds}"
+    frameborder="0"
+    allow="autoplay; encrypted-media"
+    allowfullscreen
+    controls="0"
+    >
+    </iframe>'''
+
+    return start_timestamp, end_timestamp, f"{video_iframe}\n\n"
 
 def form_query(question, model, token_budget):
 
     results = searcher(question)
 
-    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each references using the [title, author, timestamp] notation. Every sentence should have a citation at the end.'
+    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each sentence using the [title, author, timestamp] notation.'
 
     message = introduction
 
@@ -135,7 +153,8 @@ def form_query(question, model, token_budget):
             break
         else:
             message += result
-            references += f"### Segment {i+1}:\n" + refencify(result)
+            start_timestamp, end_timestamp, iframe = refencify(result)
+            references += f"### Segment {i+1} ({start_timestamp} - {end_timestamp}):\n" + iframe
 
     # Remove the last extra two newlines
     message = message[:-2]
@@ -160,6 +179,7 @@ def generate_answer(question, model, token_budget, temperature):
     )
     
     response_message = response["choices"][0]["message"]["content"]
+    
     return response_message, references
 
 def add_to_dict(title, url):
@@ -186,10 +206,12 @@ def add_to_dict(title, url):
         titles_to_urls[new_title] = url
         return new_title
 
-def main(urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature):
+def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature):
 
-    global title_counter
-    title_counter = {}
+    set_openai_key(openAI_key)
+
+    global titles_to_urls
+    titles_to_urls = {}
 
     urls = list(set(urls_text.split("\n")))
     segments = []
@@ -216,7 +238,7 @@ title = "Ask YouTube GPT 📺"
 with gr.Blocks() as demo:
 
     gr.Markdown(f'<center><h1>{title}</h1></center>')
-    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of Youtube Videos using Universal Sentence Encoder and Open AI. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>')
+    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of Youtube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>')
 
     with gr.Row():
         
@@ -230,7 +252,7 @@ with gr.Blocks() as demo:
             question = gr.Textbox(label='Enter your question here')
 
             with gr.Accordion("Advanced Settings", open=False):
-                split_by_topic = gr.Checkbox(label="Split segments by topic", value=True, info="Whether the video transcripts are to be segmented by topic or by word count. Splitting by topic may result in a more coherent response, but results in a slower response time, especially for lengthy videos.")
+                split_by_topic = gr.Checkbox(label="Split segments by topic", value=True, info="Whether the video transcripts are to be segmented by topic or by word count. Topically-coherent segments may be more useful for question answering, but results in a slower response time, especially for lengthy videos.")
                 segment_length = gr.Slider(label="Segment word count", minimum=50, maximum=500, step=50, value=200, visible=False)
 
                 def fn(split_by_topic):
@@ -239,7 +261,7 @@ with gr.Blocks() as demo:
                 # If the user wants to split by topic, allow them to set the maximum segment length. (Make segment_length visible)
                 split_by_topic.change(fn, split_by_topic, segment_length)
                 
-                n_neighbours = gr.Slider(label="Number of segments to retrieve", minimum=1, maximum=20, step=1, value=5, info="The number of segments to retrieve from each video and feed to the GPT model for answering.")
+                n_neighbours = gr.Slider(label="Number of segments to retrieve", minimum=1, maximum=20, step=1, value=5, info="The number of segments to retrieve and feed to the GPT model for answering.")
                 model = gr.Dropdown(label="Model", value="gpt-3.5-turbo", choices=["gpt-3.5-turbo", "gpt-4"])
                 token_budget = gr.Slider(label="Prompt token budget", minimum=100, maximum=4000, step=100, value=1000, info="The maximum number of tokens the prompt can take.")
                 temperature = gr.Slider(label="Temperature", minimum=0, maximum=1, step=0.1, value=0, info="The GPT model's temperature. Recommended to use a low temperature to decrease the likelihood of hallucinations.")
@@ -255,7 +277,7 @@ with gr.Blocks() as demo:
                 with gr.TabItem("References"):
                     references = gr.Markdown()
 
-        btn.click(main, inputs=[urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature], outputs=[answer, references])    
+        btn.click(main, inputs=[openAI_key, urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature], outputs=[answer, references])    
             
 #openai.api_key = os.getenv('Your_Key_Here') 
 demo.launch()
