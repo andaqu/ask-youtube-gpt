@@ -10,6 +10,7 @@ class SemanticSearch:
     
     
     def fit(self, data, batch=1000, n_neighbors=5):
+        print(f"Fitting with n={n_neighbors}...")
         self.data = data
         self.embeddings = self.get_text_embedding(data, batch=batch)
         n_neighbors = min(n_neighbors, len(self.embeddings))
