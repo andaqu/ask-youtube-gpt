@@ -221,8 +221,8 @@ def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neig
     for url in urls:
 
         if "youtu.be" in url:
-            url = url.replace("youtu.be", "youtube.com/watch?v=")
-            
+            url = url.replace("youtu.be/", "youtube.com/watch?v=")
+
         df, title, author = get_youtube_data(url)
         
         title = add_to_dict(title, url)
