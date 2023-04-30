@@ -29,10 +29,7 @@ def set_openai_key(key):
 
 def get_youtube_data(url):
 
-    if "youtu.be" in url:
-        video_id = url.split("/")[-1]
-    else: 
-        video_id = url.split("=")[1]
+    video_id = url.split("=")[1]
 
     try:
         raw = YouTubeTranscriptApi.get_transcript(video_id)
@@ -222,6 +219,10 @@ def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neig
     segments = []
 
     for url in urls:
+
+        if "youtu.be" in url:
+            url = url.replace("youtu.be", "youtube.com/watch?v=")
+            
         df, title, author = get_youtube_data(url)
         
         title = add_to_dict(title, url)
