@@ -138,7 +138,7 @@ def form_query(question, model, token_budget):
 
     results = searcher(question)
 
-    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each sentence using the [title, author, timestamp] notation.'
+    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each sentence using the [title, author, timestamp] notation. Every sentence must have a citation!'
 
     message = introduction
 
