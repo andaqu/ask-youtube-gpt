@@ -29,7 +29,10 @@ def set_openai_key(key):
 
 def get_youtube_data(url):
 
-    video_id = url.split("=")[1]
+    if "youtu.be" in url:
+        video_id = url.split("/")[-1]
+    else: 
+        video_id = url.split("=")[1]
 
     try:
         raw = YouTubeTranscriptApi.get_transcript(video_id)
