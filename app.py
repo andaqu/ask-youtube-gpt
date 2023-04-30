@@ -210,6 +210,9 @@ def add_to_dict(title, url):
 
 def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature):
 
+    print(question)
+    print(urls_text)
+
     set_openai_key(openAI_key)
 
     global titles_to_urls
@@ -236,6 +239,8 @@ def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neig
     if fit_searcher(segments, n_neighbours):
         print("Searcher fit successfully!")
         answer, references = generate_answer(question, model, token_budget, temperature)
+
+    print(answer)
 
     return answer, references
 
