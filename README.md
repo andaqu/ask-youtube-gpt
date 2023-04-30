@@ -12,3 +12,10 @@ pinned: false
 # Ask Youtube GPT
 
 Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI.
+
+## Ideas / Future Improvements
+
+- [ ] Add "Suggest a question" feature (maybe through clustering?)
+- [ ] Add explainable segment retrieval (i.e. why did that specific segment get chosen to answer the question?)
+- [ ] Add OpenAI embeddings
+- [ ] Improve the retrieval process allowing for the retrieval to return at least one segment from each video (This would in turn enable comparision of videos, i.e. which video explains topic X in more depth?)
