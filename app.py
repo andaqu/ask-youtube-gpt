@@ -8,9 +8,11 @@ import requests
 import tiktoken
 import openai
 import json
+import nltk
 import re
 import os
 
+nltk.download('stopwords')
 tt = TextTilingTokenizer()
 searcher = SemanticSearch()
 
