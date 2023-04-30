@@ -9,6 +9,7 @@ import tiktoken
 import openai
 import json
 import re
+import os
 
 tt = TextTilingTokenizer()
 searcher = SemanticSearch()
@@ -20,8 +21,8 @@ title_counter = {}
 titles_to_urls = {}
 
 def set_openai_key(key):
-    if key == "":
-        return
+    if key == "env":
+        key = os.environ.get("OPENAI_API_KEY")
     openai.api_key = key
 
 def get_youtube_data(url):
@@ -120,13 +121,12 @@ def refencify(text):
     end_seconds = to_seconds(end_timestamp)
 
     video_iframe = f'''<iframe
-    width="320"
+    width="400"
     height="240"
-    src="{url.replace("watch?v=", "embed/")}?start={start_seconds}&end={end_seconds}"
+    src="{url.replace("watch?v=", "embed/")}?start={start_seconds}&end={end_seconds}&controls=0"
     frameborder="0"
-    allow="autoplay; encrypted-media"
+    allow="accelerometer; autoplay; modestbranding; encrypted-media; gyroscope; picture-in-picture"
     allowfullscreen
-    controls="0"
     >
     </iframe>'''
 
@@ -179,7 +179,7 @@ def generate_answer(question, model, token_budget, temperature):
     )
     
     response_message = response["choices"][0]["message"]["content"]
-    
+
     return response_message, references
 
 def add_to_dict(title, url):
@@ -238,18 +238,18 @@ title = "Ask YouTube GPT 📺"
 with gr.Blocks() as demo:
 
     gr.Markdown(f'<center><h1>{title}</h1></center>')
-    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of Youtube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>')
+    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>')
 
     with gr.Row():
         
         with gr.Group():
             
-            openAI_key=gr.Textbox(label='Enter your OpenAI API key here')
+            openAI_key=gr.Textbox(label='Enter your OpenAI API key here:')
 
             # Allow the user to input multiple links, adding a textbox for each
-            urls_text = gr.Textbox(lines=5, label="Enter the links to the YouTube videos you want to search (one per line):", placeholder="https://www.youtube.com/watch?v=4xWJf8cERoM\nhttps://www.youtube.com/watch?v=vx-Si9gbijA")
+            urls_text = gr.Textbox(lines=5, label="Enter the links to the YouTube videos you want to search (one per line):", placeholder="https://www.youtube.com/watch?v=...")
 
-            question = gr.Textbox(label='Enter your question here')
+            question = gr.Textbox(label='Enter your question here:')
 
             with gr.Accordion("Advanced Settings", open=False):
                 split_by_topic = gr.Checkbox(label="Split segments by topic", value=True, info="Whether the video transcripts are to be segmented by topic or by word count. Topically-coherent segments may be more useful for question answering, but results in a slower response time, especially for lengthy videos.")
