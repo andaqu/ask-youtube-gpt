@@ -8,4 +8,5 @@ scikit_learn==1.2.2
 tensorflow==2.7.2
 tensorflow_hub==0.13.0
 tiktoken==0.3.3
+youtube_search_python==1.6.6
 youtube_transcript_api==0.6.0
