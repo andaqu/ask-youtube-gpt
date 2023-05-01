@@ -15,7 +15,7 @@ Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using 
 
 ## Ideas / Future Improvements
 
-- [ ] Omit the need for a set of videos, and instead use a search query to find videos on the fly.
+- [x] Omit the need for a set of videos, and instead use a search query to find videos on the fly.
 - [ ] Add "Suggest a question" feature given the videos (maybe through clustering?)
 - [ ] Add explainable segment retrieval (i.e. why did that specific segment get chosen to answer the question?)
 - [ ] Add OpenAI embeddings

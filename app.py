@@ -1,5 +1,6 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from nltk.tokenize import TextTilingTokenizer 
+from youtubesearchpython import VideosSearch
 from semantic_search import SemanticSearch 
 import pandas as pd
 import gradio as gr
@@ -34,10 +35,14 @@ def get_youtube_data(url):
     try:
         raw = YouTubeTranscriptApi.get_transcript(video_id)
     except:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        for transcript in transcript_list:
-            raw = transcript.translate('en').fetch()
-            break
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            for transcript in transcript_list:
+                raw = transcript.translate('en').fetch()
+                break
+        except:
+            print(f"No transcript found for {url}") # Usually because the video itself disabled captions
+            return False
 
     response = requests.get(f"https://noembed.com/embed?dataType=json&url={url}")
     data = json.loads(response.content)
@@ -83,7 +88,10 @@ def get_segments(df, title, author, split_by_topic, segment_length = 200):
         words = transcript.split()
         segments = [' '.join(words[i:i+segment_length]) for i in range(0, len(words), segment_length)]
     else:
-        segments = tt.tokenize(transcript)
+        try:
+            segments = tt.tokenize(transcript)
+        except:
+            return ""
 
     segments = [segment.replace('\n','').strip() for segment in segments]
 
@@ -138,7 +146,7 @@ def form_query(question, model, token_budget):
 
     results = searcher(question)
 
-    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each sentence using the [title, author, timestamp] notation. Every sentence must have a citation!'
+    introduction = 'Use the below segments from multiple youtube videos to answer the subsequent question. If the answer cannot be found in the articles, write "I could not find an answer." Cite each sentence using the [title, author, timestamp] notation. Every sentence MUST have a citation!'
 
     message = introduction
 
@@ -208,17 +216,28 @@ def add_to_dict(title, url):
         titles_to_urls[new_title] = url
         return new_title
 
-def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature):
+def search_youtube(question, n_videos):
+    videosSearch = VideosSearch(question, limit = n_videos)
+    urls = ["https://www.youtube.com/watch?v=" + video["id"] for video in videosSearch.result()["result"]]
+    print(urls)
+    return urls
+
+
+def main(openAI_key, question, n_videos, urls_text, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature):
 
     print(question)
     print(urls_text)
 
     set_openai_key(openAI_key)
 
+    if urls_text == "":
+        urls = search_youtube(question, n_videos)
+    else:
+        urls = list(set(urls_text.split("\n")))
+
     global titles_to_urls
     titles_to_urls = {}
 
-    urls = list(set(urls_text.split("\n")))
     segments = []
 
     for url in urls:
@@ -226,13 +245,21 @@ def main(openAI_key, urls_text, question, split_by_topic, segment_length, n_neig
         if "youtu.be" in url:
             url = url.replace("youtu.be/", "youtube.com/watch?v=")
 
-        df, title, author = get_youtube_data(url)
+        res = get_youtube_data(url)
+
+        if not res:
+            continue
+
+        df, title, author = res
         
         title = add_to_dict(title, url)
 
         video_segments = get_segments(df, title, author, split_by_topic, segment_length)
 
         segments.extend(video_segments)
+    
+    if segments == []:
+        return "Something wrong happened! Try specifying the YouTube videos or changing the query.", ""
 
     print("Segments generated successfully!")
 
@@ -249,7 +276,7 @@ title = "Ask YouTube GPT 📺"
 with gr.Blocks() as demo:
 
     gr.Markdown(f'<center><h1>{title}</h1></center>')
-    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. It does not use the video/s itself, but rather the transcript/s of such video/s. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>')
+    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. It does not use the video/s itself, but rather the transcript/s of such video/s. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>\n\n### Latest Update (01/05/23)\n> Specifying the set of YouTube videos has now been made optional. Instead you can simply specify a question and the number of videos to retrieve from YouTube.')
 
     with gr.Row():
         
@@ -257,12 +284,22 @@ with gr.Blocks() as demo:
             
             openAI_key=gr.Textbox(label='Enter your OpenAI API key here:')
 
-            # Allow the user to input multiple links, adding a textbox for each
-            urls_text = gr.Textbox(lines=5, label="Enter the links to the YouTube videos you want to search (one per line):", placeholder="https://www.youtube.com/watch?v=...")
-
             question = gr.Textbox(label='Enter your question here:')
 
             with gr.Accordion("Advanced Settings", open=False):
+                # Allow the user to input multiple links, adding a textbox for each
+                urls_text = gr.Textbox(lines=5, label="Enter the links to the YouTube videos you want to search (one per line).", info="If left blank, the question will be used to search and retrieve videos from YouTube.", placeholder="https://www.youtube.com/watch?v=...")
+
+                n_videos = gr.Slider(label="Number of videos to retrieve", minimum=1, maximum=10, step=1, value=5, info="The number of videos to retrieve and feed to the GPT model for answering the question.")
+
+                def fn2(urls_text):
+                    if urls_text != "":
+                        return gr.Slider.update(visible=False)
+                    else:
+                        return gr.Slider.update(visible=True)
+
+                urls_text.change(fn2, urls_text, n_videos)
+
                 split_by_topic = gr.Checkbox(label="Split segments by topic", value=True, info="Whether the video transcripts are to be segmented by topic or by word count. Topically-coherent segments may be more useful for question answering, but results in a slower response time, especially for lengthy videos.")
                 segment_length = gr.Slider(label="Segment word count", minimum=50, maximum=500, step=50, value=200, visible=False)
 
@@ -288,7 +325,7 @@ with gr.Blocks() as demo:
                 with gr.TabItem("References"):
                     references = gr.Markdown()
 
-        btn.click(main, inputs=[openAI_key, urls_text, question, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature], outputs=[answer, references])    
+        btn.click(main, inputs=[openAI_key, question, n_videos, urls_text, split_by_topic, segment_length, n_neighbours, model, token_budget, temperature], outputs=[answer, references])    
             
 #openai.api_key = os.getenv('Your_Key_Here') 
 demo.launch()
