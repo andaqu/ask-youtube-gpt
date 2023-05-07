@@ -49,6 +49,10 @@ def get_youtube_data(url):
 
     title, author = data["title"], data["author_name"]
 
+    # ' is a reserved character
+    title = title.replace("'", "")
+    author = author.replace("'", "")
+
     df = pd.DataFrame(raw)
 
     df['end'] = df['start'] + df['duration']
