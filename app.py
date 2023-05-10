@@ -186,12 +186,18 @@ def generate_answer(question, model, token_budget, temperature):
         {"role": "user", "content": message},
     ]
 
-    response = openai.ChatCompletion.create(
-        model=model,
-        messages=messages,
-        temperature=temperature
-    )
+    try:
+
+        response = openai.ChatCompletion.create(
+            model=model,
+            messages=messages,
+            temperature=temperature
+        )
+
+    except:
+        return "An OpenAI error occured. Make sure you did not exceed your usage limit or you provided a valid API key.", ""
     
+
     response_message = response["choices"][0]["message"]["content"]
 
     return response_message, references
