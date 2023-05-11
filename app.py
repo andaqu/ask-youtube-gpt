@@ -285,10 +285,10 @@ title = "Ask YouTube GPT 📺"
 
 with gr.Blocks() as demo:
 
-    gr.Markdown(f'<center><h1>{title}</h1></center>')
-    gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. It does not use the video/s itself, but rather the transcript/s of such video/s. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>\n\n### Latest Update (01/05/23)\n> Specifying the set of YouTube videos has now been made optional. Instead you can simply specify a question and the number of videos to retrieve from YouTube.')
-
     with gr.Row():
+
+        gr.Markdown(f'<center><h1>{title}</h1></center>')
+        gr.Markdown(f'Ask YouTube GPT allows you to ask questions about a set of YouTube Videos using Topic Segmentation, Universal Sentence Encoding, and Open AI. It does not use the video/s itself, but rather the transcript/s of such video/s. The returned response cites the video title, author and timestamp in square brackets where the information is located, adding credibility to the responses and helping you locate incorrect information. If you need one, get your Open AI API key <a href="https://platform.openai.com/account/api-keys">here</a>.</p>\n\n### Latest Update (01/05/23)\n> Specifying the set of YouTube videos has now been made optional. Instead you can simply specify a question and the number of videos to retrieve from YouTube.')
         
         with gr.Group():
             

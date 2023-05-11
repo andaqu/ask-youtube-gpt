@@ -1,5 +1,5 @@
 ---
-title: Ask Youtube Gpt
+title: Ask Youtube GPT
 emoji: 📺
 colorFrom: white
 colorTo: red
